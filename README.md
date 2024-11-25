@@ -1,11 +1,19 @@
 
-# The Ultimate Overengineered Question Generator 2.0
+# The Ultimate Overengineered Question Generator 3.0
 
-**"Because simple code is for the weak"**
+**"Because simple code is for the weak, and AI makes it even better"**
 
-Welcome to **The Ultimate Overengineered Question Generator 2.0**! This Python application is meticulously crafted to generate questions with maximum engineering complexity while maintaining actual functionality. It's designed to mock and amuse fans of overly complicated review appraisals, especially those laden with redundant references to accuracy and unnecessary abstraction. Dive into a world where every line of code serves no practical purpose other than to showcase the art of overengineering.
+Welcome to **The Ultimate Overengineered Question Generator 3.0**! This Python application is meticulously crafted to generate questions with maximum engineering complexity while maintaining actual functionality. Now enhanced with AI-powered question refinement using Mistral, it takes overcomplicated questions and makes them sound surprisingly human - because why not add another layer of complexity?
 
 ---
+
+## What's New in 3.0?
+
+- **AI-Powered Question Enhancement:** Using Mistral 7B to make our overcomplicated questions sound deceptively natural
+- **Complexity-Aware Prompting:** Each complexity level now has its own unique AI personality
+- **Enhanced Question Styles:** From philosophical musings to quantum paradoxes
+- **Local AI Processing:** No API keys or internet required
+
 
 ## Table of Contents
 
@@ -40,55 +48,42 @@ Welcome to **The Ultimate Overengineered Question Generator 2.0**! This Python a
 ## Installation
 
 1. **Clone the Repository:**
-
    ```bash
-   git clone https://github.com/angelos-d-l/Overengineered-Question-Genetator.git
-   cd Overengineered-Question-Genetator
+   git clone https://github.com/angelos-d-l/Overengineered-Question-Generator.git
+   cd Overengineered-Question-Generator
    ```
 
-2. **Create a Virtual Environment (Optional but Recommended):**
-
+2. **Create a Virtual Environment:**
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 3. **Install Dependencies:**
-
-   Ensure you have `pip` installed. Then, install the required packages:
-
    ```bash
-   pip install -r requirements.txt
+   pip install ctransformers pyyaml
    ```
 
-   *If you don't have a `requirements.txt`, install `PyYAML` directly:*
-
+4. **Download Mistral Model:**
    ```bash
-   pip install PyYAML
+   curl -L -o mistral-7b-instruct-v0.1.Q4_K_M.gguf https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.1-GGUF/resolve/main/mistral-7b-instruct-v0.1.Q4_K_M.gguf
    ```
 
----
+   The model is about 4GB in size and runs efficiently on modern CPUs.
 
 ## Configuration
 
-The application uses a `config.yaml` file to manage various settings, enhancing both functionality and humor. Here's how to set it up:
-
 1. **Create `config.yaml`:**
-
-   Place a `config.yaml` file in the same directory as the script or specify its path using the `--config` argument.
-
-2. **Sample `config.yaml`:**
-
    ```yaml
    ascii_art:
      header: |
        ╔══════════════════════════════════════════════════════════╗
-       ║ The Ultimate Overengineered Question Generator 2.0       ║
-       ║ "Embrace the redundancy of complexity"                   ║
+       ║ The Ultimate Overengineered Question Generator 3.0       ║
+       ║ "Now with AI-powered overthinking!"                      ║
        ╚══════════════════════════════════════════════════════════╝
      footer: |
        ╔══════════════════════════════════════════════════════════╗
-       ║ Remember: Overengineering is an art form                 ║
+       ║ Remember: AI makes everything better*                    ║
        ╚══════════════════════════════════════════════════════════╝
 
    feature_flags:
@@ -96,26 +91,6 @@ The application uses a `config.yaml` file to manage various settings, enhancing 
      enable_philosophical_prefix: true
      enable_reverse_text: false
    ```
-
-3. **Configuration Breakdown:**
-
-   - **AsciiArt:**
-     - **header:** Customizes the ASCII art displayed at the start of the application.
-     - **footer:** Customizes the ASCII art displayed at the end of the application.
-
-   - **FeatureFlags:**
-     - **enable_excessive_punctuation:** When `true`, appends excessive punctuation to questions.
-     - **enable_philosophical_prefix:** When `true`, adds a philosophical prefix to questions.
-     - **enable_reverse_text:** When `true`, reverses the text of certain questions for added absurdity.
-
-4. **Environment Variable Overrides:**
-
-   You can override any configuration by setting environment variables with the corresponding uppercase keys. For example:
-
-   ```bash
-   export ENABLE_EXCESSIVE_PUNCTUATION=true
-   ```
-
 ---
 
 ## Usage
@@ -280,10 +255,36 @@ While maintaining a humorous context, the application collects and displays mean
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+
+## System Requirements
+
+- Python 3.8 or higher
+- 8GB RAM minimum (16GB recommended)
+- 4GB disk space for the Mistral model
+- Modern CPU (Apple Silicon or recent Intel/AMD)
+
+### Optimizations for Different Systems
+
+#### Apple Silicon (M1/M2)
+- The default configuration is optimized for Apple Silicon
+- Uses CPU inference efficiently
+- No additional setup required
+
+#### NVIDIA GPUs
+- Change `gpu_layers=0` to a higher number in MistralBackend for GPU acceleration
+- Requires CUDA setup
+
+[Rest of the sections remain the same...]
+
+## License
+
+This project is licensed under the MIT License.
 
 ---
 
-**Remember: Overengineering is an art form**
+**Remember: When in doubt, add more AI**
+
+*Results may vary. Side effects may include excessive questioning of simple tasks and philosophical debates about code quality.*
+
 
 ![If you know you know](albert.png)
