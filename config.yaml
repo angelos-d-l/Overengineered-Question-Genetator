@@ -1,12 +1,12 @@
 ascii_art:
   header: |
     ╔══════════════════════════════════════════════════════════╗
-    ║ The Ultimate Overengineered Question Generator 2.0       ║
-    ║ "Embrace the redundancy of complexity"                   ║
+    ║ The Ultimate Overengineered Question Generator 3.0       ║
+    ║ "Because simple code is for the weak"                   ║
     ╚══════════════════════════════════════════════════════════╝
   footer: |
     ╔══════════════════════════════════════════════════════════╗
-    ║ Remember: Overengineering is an art form                 ║
+    ║ Remember: With great power comes great complexity        ║
     ╚══════════════════════════════════════════════════════════╝
 
 feature_flags:
