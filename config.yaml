@@ -1,0 +1,15 @@
+ascii_art:
+  header: |
+    ╔══════════════════════════════════════════════════════════╗
+    ║ The Ultimate Overengineered Question Generator 2.0       ║
+    ║ "Embrace the redundancy of complexity"                   ║
+    ╚══════════════════════════════════════════════════════════╝
+  footer: |
+    ╔══════════════════════════════════════════════════════════╗
+    ║ Remember: Overengineering is an art form                 ║
+    ╚══════════════════════════════════════════════════════════╝
+
+feature_flags:
+  enable_excessive_punctuation: false
+  enable_philosophical_prefix: true
+  enable_reverse_text: false
