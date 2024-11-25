@@ -20,6 +20,7 @@ from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
 from weakref import WeakValueDictionary
 
 import yaml
+from ctransformers import AutoModelForCausalLM
 
 
 class ColorizedFormatter(logging.Formatter):
@@ -49,6 +50,50 @@ logger.setLevel(logging.DEBUG)
 
 T = TypeVar("T")
 U = TypeVar("U")
+
+
+class MistralBackend:
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance.initialize()
+        return cls._instance
+
+    def initialize(self):
+        logger.info("Initializing Mistral model...")
+        self.llm = AutoModelForCausalLM.from_pretrained(
+            "mistral-7b-instruct-v0.1.Q4_K_M.gguf", context_length=2048, gpu_layers=0
+        )
+
+    def generate(self, prompt: str) -> str:
+        formatted_prompt = f"<s>[INST] {prompt} [/INST]"
+        return self.llm(
+            formatted_prompt,
+            max_new_tokens=1000,  # Maximum length of generated text
+            temperature=0.7,  # Higher = more creative, Lower = more focused
+            top_p=0.95,  # Nucleus sampling: controls randomness
+        )
+
+
+class QuestionEnhancer:
+    def __init__(self):
+        self.llm = MistralBackend()
+
+    def enhance_question(self, technical_question: str) -> str:
+        prompt = f"""
+        Transform this technical question into a natural, conversational question while 
+        maintaining its focus on work quality and attention to detail:
+        {technical_question}
+
+        Make it sound like a thoughtful manager asking about work quality.
+        Be concise and direct.
+        """
+        return self.llm.generate(prompt).strip()
 
 
 class MetricsCollector:
@@ -414,9 +459,10 @@ class QuestionStateManager:
 
 
 class QuestionGenerator(ABC):
-    def __init__(self):
+    def __init__(self, complexity: QuestionComplexity, **kwargs):
         self.components = QuestionComponentsV2()
         self.cache = CacheManager.get_cache("question_cache")
+        self.complexity = complexity
 
     @abstractmethod
     def generate_question(self) -> str:
@@ -471,8 +517,8 @@ class ComplexQuestionGenerator(QuestionGenerator):
 
 
 class RecursiveQuestionGenerator(QuestionGenerator):
-    def __init__(self, max_depth: int = 3):
-        super().__init__()
+    def __init__(self, max_depth: int = 3, **kwargs):
+        super().__init__(**kwargs)
         self.max_depth = max_depth
 
     @execution_time_logger
@@ -495,23 +541,180 @@ class RecursiveQuestionGenerator(QuestionGenerator):
         )
 
 
+class PromptTemplates:
+    PERSONA_STARTERS = [
+        "As a thoughtful colleague",
+        "From your experience",
+        "In your view",
+        "Based on your perspective",
+        "With your expertise",
+        "In your practice",
+        "From your standpoint",
+        "",  # Empty string for no starter
+    ]
+
+    COMPLEXITY_PROMPTS: Dict[QuestionComplexity, List[str]] = {
+        QuestionComplexity.SIMPLE: [
+            "Transform this into a clear, direct question: {question}",
+            "Make this question straightforward and simple: {question}",
+            "Rephrase this directly and clearly: {question}",
+        ],
+        QuestionComplexity.MODERATE: [
+            "Rephrase this with subtle layers of meaning while keeping it professional: {question}",
+            "Add some nuanced context to this question while keeping it clear: {question}",
+            "Incorporate some gentle complexity into this question: {question}",
+        ],
+        QuestionComplexity.COMPLEX: [
+            "Elaborate this question using rich vocabulary and interconnected concepts: {question}",
+            "Weave multiple related aspects into this question using sophisticated language: {question}",
+            "Create a multifaceted version of this question using precise terminology: {question}",
+        ],
+        QuestionComplexity.RECURSIVE: [
+            "Create a question that leads to deeper and deeper levels of reflection: {question}",
+            "Generate a recursive exploration that builds upon itself: {question}",
+            "Craft a question that unfolds into further questions: {question}",
+        ],
+        QuestionComplexity.PHILOSOPHICAL: [
+            "Infuse this question with deep philosophical implications: {question}",
+            "Transform this into a thought-provoking philosophical inquiry: {question}",
+            "Elevate this question to explore fundamental truths: {question}",
+        ],
+        QuestionComplexity.EXISTENTIAL_CRISIS: [
+            "Turn this into a question that challenges basic assumptions: {question}",
+            "Create a version that makes one reflect deeply on their choices: {question}",
+            "Rephrase this to probe the fundamental nature of work and purpose: {question}",
+        ],
+        QuestionComplexity.QUANTUM: [
+            "Make this question exist in multiple states simultaneously: {question}",
+            "Create a version that explores paradoxical possibilities: {question}",
+            "Transform this into a question that defies binary answers: {question}",
+        ],
+        QuestionComplexity.INFINITE_LOOP: [
+            "Craft a question that creates an endless cycle of reflection: {question}",
+            "Generate a self-referential version that loops back on itself: {question}",
+            "Transform this into a question that leads to infinite contemplation: {question}",
+        ],
+    }
+
+    @classmethod
+    def generate_prompt(cls, complexity: QuestionComplexity, question: str) -> str:
+        prompt_template = random.choice(cls.COMPLEXITY_PROMPTS[complexity])
+
+        starter = random.choice(cls.PERSONA_STARTERS)
+
+        prompt = f"""
+        {prompt_template}
+
+        Guidelines:
+        - {complexity.value}
+        - Avoid starting with 'As a manager' or similar phrases
+        - {starter} (use this as a conversation starter if appropriate)
+        - Keep the focus on quality and attention to detail
+        - Make it sound natural and conversational
+        - Maintain professionalism while being engaging
+        """
+
+        return prompt.format(question=question)
+
+
+class QuestionEnhancer:
+    def __init__(self):
+        self.llm = MistralBackend()
+
+    def enhance_question(
+        self, technical_question: str, complexity: QuestionComplexity
+    ) -> str:
+        prompt = PromptTemplates.generate_prompt(complexity, technical_question)
+        return self.llm.generate(prompt).strip()
+
+
+class EnhancedQuestionGenerator(QuestionGenerator):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.enhancer = QuestionEnhancer()
+
+    def generate_question(self) -> str:
+        technical_question = super().generate_question()
+        return self.enhancer.enhance_question(technical_question, self.complexity)
+
+
+class EnhancedSimpleQuestionGenerator(
+    SimpleQuestionGenerator, EnhancedQuestionGenerator
+):
+    def __init__(self, **kwargs):
+        SimpleQuestionGenerator.__init__(self, **kwargs)
+        EnhancedQuestionGenerator.__init__(self, **kwargs)
+
+    def generate_question(self) -> str:
+        technical_question = SimpleQuestionGenerator.generate_question(self)
+        return self.enhancer.enhance_question(technical_question, self.complexity)
+
+
+class EnhancedModerateQuestionGenerator(
+    ModerateQuestionGenerator, EnhancedQuestionGenerator
+):
+    def __init__(self, **kwargs):
+        ModerateQuestionGenerator.__init__(self, **kwargs)
+        EnhancedQuestionGenerator.__init__(self, **kwargs)
+
+    def generate_question(self) -> str:
+        technical_question = ModerateQuestionGenerator.generate_question(self)
+        return self.enhancer.enhance_question(technical_question, self.complexity)
+
+
+class EnhancedComplexQuestionGenerator(
+    ComplexQuestionGenerator, EnhancedQuestionGenerator
+):
+    def __init__(self, **kwargs):
+        ComplexQuestionGenerator.__init__(self, **kwargs)
+        EnhancedQuestionGenerator.__init__(self, **kwargs)
+
+    def generate_question(self) -> str:
+        technical_question = ComplexQuestionGenerator.generate_question(self)
+        return self.enhancer.enhance_question(technical_question, self.complexity)
+
+
+class EnhancedRecursiveQuestionGenerator(
+    RecursiveQuestionGenerator, EnhancedQuestionGenerator
+):
+    def __init__(self, max_depth: int = 3, **kwargs):
+        super().__init__(max_depth=max_depth, **kwargs)
+        self.enhancer = QuestionEnhancer()
+
+    def generate_question(self) -> str:
+        technical_question = RecursiveQuestionGenerator.generate_question(self)
+        return self.enhancer.enhance_question(technical_question, self.complexity)
+
+
 class QuestionGeneratorFactoryV2:
     _generators = {
-        QuestionComplexity.SIMPLE: SimpleQuestionGenerator,
-        QuestionComplexity.MODERATE: ModerateQuestionGenerator,
-        QuestionComplexity.COMPLEX: ComplexQuestionGenerator,
-        QuestionComplexity.RECURSIVE: RecursiveQuestionGenerator,
+        QuestionComplexity.SIMPLE: EnhancedSimpleQuestionGenerator,
+        QuestionComplexity.MODERATE: EnhancedModerateQuestionGenerator,
+        QuestionComplexity.COMPLEX: EnhancedComplexQuestionGenerator,
+        QuestionComplexity.RECURSIVE: EnhancedRecursiveQuestionGenerator,
+        QuestionComplexity.PHILOSOPHICAL: EnhancedComplexQuestionGenerator,
+        QuestionComplexity.EXISTENTIAL_CRISIS: EnhancedComplexQuestionGenerator,
+        QuestionComplexity.QUANTUM: EnhancedComplexQuestionGenerator,
+        QuestionComplexity.INFINITE_LOOP: EnhancedRecursiveQuestionGenerator,
     }
 
     @classmethod
     def get_generator(
         cls, complexity: QuestionComplexity, **kwargs
     ) -> QuestionGenerator:
-        generator_class = cls._generators.get(complexity, SimpleQuestionGenerator)
-        if complexity == QuestionComplexity.RECURSIVE:
-            return generator_class(**kwargs)
+        generator_class = cls._generators.get(
+            complexity, EnhancedSimpleQuestionGenerator
+        )
+
+        if complexity in {
+            QuestionComplexity.RECURSIVE,
+            QuestionComplexity.INFINITE_LOOP,
+        }:
+            return generator_class(
+                complexity=complexity, max_depth=kwargs.get("max_depth", 3)
+            )
         else:
-            return generator_class()
+            return generator_class(complexity=complexity)
 
 
 async def generate_question_async(
@@ -521,7 +724,9 @@ async def generate_question_async(
     **kwargs,
 ) -> tuple[str, QuestionMetadata]:
     start_time = time.perf_counter()
-    generator = QuestionGeneratorFactoryV2.get_generator(complexity, **kwargs)
+    generator = QuestionGeneratorFactoryV2.get_generator(
+        complexity=complexity, **kwargs
+    )
     question = generator.generate_question()
     await asyncio.sleep(random.random() * 0.1)
     overthinking_metrics = OverthinkingMetrics(
@@ -570,7 +775,7 @@ class AsciiArt:
             "header",
             """
 ╔══════════════════════════════════════════════════════════╗
-║ The Ultimate Overengineered Question Generator 2.0       ║
+║ The Ultimate Overengineered Question Generator 3.0       ║
 ║ "Because simple code is for the weak"                    ║
 ╚══════════════════════════════════════════════════════════╝
 """,
@@ -587,7 +792,7 @@ class AsciiArt:
 
 async def main():
     parser = argparse.ArgumentParser(
-        description="The Ultimate Overengineered Question Generator 2.0",
+        description="The Ultimate Overengineered Question Generator 3.0",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
@@ -678,7 +883,9 @@ async def main():
         else:
             correlation_id = str(uuid.uuid4())
             question, metadata = await generate_question_async(
-                complexity, correlation_id, max_depth=args.max_depth
+                complexity,
+                correlation_id,
+                max_depth=args.max_depth,
             )
             print("\nGenerating your question with maximum overengineering...\n")
             time.sleep(1)
