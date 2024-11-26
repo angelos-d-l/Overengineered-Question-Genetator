@@ -253,7 +253,6 @@ While maintaining a humorous context, the application collects and displays mean
 
 ---
 
-## License
 
 
 ## System Requirements
