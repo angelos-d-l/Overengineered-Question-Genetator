@@ -273,7 +273,6 @@ While maintaining a humorous context, the application collects and displays mean
 - Change `gpu_layers=0` to a higher number in MistralBackend for GPU acceleration
 - Requires CUDA setup
 
-[Rest of the sections remain the same...]
 
 ## License
 
